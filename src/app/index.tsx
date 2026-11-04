@@ -17,10 +17,20 @@ type EditorState = { mode: 'new' } | { mode: 'edit'; item: ShoppingItem } | null
 export default function ShoppingListScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const { items, addItem, updateItem, removeItem, changeQuantity } = useShopping();
+  const { items, addItem, updateItem, removeItem, changeQuantity, toggleBought, clearBought } =
+    useShopping();
   const [editor, setEditor] = useState<EditorState>(null);
 
   const groups = groupBySection(items).map((group) => ({ ...group, key: group.section.id }));
+  const boughtCount = items.filter((item) => item.bought).length;
+
+  // Убрать из списка всё, что уже куплено.
+  function confirmClearBought() {
+    Alert.alert('Очистить купленные?', `Из списка уберётся: ${pluralItems(boughtCount)}.`, [
+      { text: 'Отмена', style: 'cancel' },
+      { text: 'Очистить', style: 'destructive', onPress: clearBought },
+    ]);
+  }
 
   // Кнопка «−» на единице: спрашиваем, удалить ли товар.
   function decrease(item: ShoppingItem) {
@@ -51,13 +61,27 @@ export default function ShoppingListScreen() {
           <View style={styles.header}>
             <ThemedText style={styles.title}>Что купить</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {pluralItems(items.length)} · разделов: {groups.length}
+              {pluralItems(items.length)}
+              {boughtCount > 0 ? ` · куплено ${boughtCount} из ${items.length}` : ''}
             </ThemedText>
             <Pressable
               onPress={() => setEditor({ mode: 'new' })}
               style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
               <ThemedText style={styles.addButtonText}>＋  Добавить товар</ThemedText>
             </Pressable>
+            {boughtCount > 0 && (
+              <Pressable
+                onPress={confirmClearBought}
+                style={({ pressed }) => [
+                  styles.clearButton,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedText style={styles.clearButtonText}>
+                  Очистить купленные ({boughtCount})
+                </ThemedText>
+              </Pressable>
+            )}
           </View>
         }
         renderSectionHeader={({ section }) => (
@@ -74,6 +98,7 @@ export default function ShoppingListScreen() {
             buttonColor={theme.backgroundSelected}
             dividerColor={theme.backgroundSelected}
             onPress={() => setEditor({ mode: 'edit', item })}
+            onToggleBought={() => toggleBought(item.id)}
             onIncrease={() => changeQuantity(item.id, 1)}
             onDecrease={() => decrease(item)}
           />
@@ -119,11 +144,13 @@ type ItemRowProps = {
   buttonColor: string;
   dividerColor: string;
   onPress: () => void;
+  onToggleBought: () => void;
   onIncrease: () => void;
   onDecrease: () => void;
 };
 
-// Одна строка с товаром. Нажатие на строку — открыть форму, кнопки − и + меняют количество.
+// Одна строка с товаром.
+// Кружок слева — отметить «куплено». Нажатие на строку — открыть форму. Кнопки − и + меняют количество.
 function ItemRow({
   item,
   isFirst,
@@ -132,9 +159,12 @@ function ItemRow({
   buttonColor,
   dividerColor,
   onPress,
+  onToggleBought,
   onIncrease,
   onDecrease,
 }: ItemRowProps) {
+  const bought = item.bought === true;
+
   return (
     <Pressable
       onPress={onPress}
@@ -145,8 +175,15 @@ function ItemRow({
         isLast && styles.rowLast,
         pressed && styles.rowPressed,
       ]}>
-      <View style={styles.rowText}>
-        <ThemedText>{item.name}</ThemedText>
+      <Pressable
+        onPress={onToggleBought}
+        hitSlop={10}
+        style={[styles.check, bought ? styles.checkOn : { borderColor: buttonColor }]}>
+        {bought && <ThemedText style={styles.checkMark}>✓</ThemedText>}
+      </Pressable>
+
+      <View style={[styles.rowText, bought && styles.dimmed]}>
+        <ThemedText style={bought && styles.strike}>{item.name}</ThemedText>
         {item.note ? (
           <ThemedText type="small" themeColor="textSecondary">
             {item.note}
@@ -154,13 +191,20 @@ function ItemRow({
         ) : null}
       </View>
 
-      <View style={styles.stepper}>
-        <RoundButton label="−" onPress={onDecrease} color={buttonColor} size={32} />
-        <ThemedText type="smallBold" style={styles.quantity}>
+      {bought ? (
+        // У купленного товара кнопки − и + не нужны, просто показываем количество.
+        <ThemedText type="smallBold" style={[styles.quantity, styles.dimmed]}>
           {formatQuantity(item.quantity)} {item.unit}
         </ThemedText>
-        <RoundButton label="+" onPress={onIncrease} color={buttonColor} size={32} />
-      </View>
+      ) : (
+        <View style={styles.stepper}>
+          <RoundButton label="−" onPress={onDecrease} color={buttonColor} size={32} />
+          <ThemedText type="smallBold" style={styles.quantity}>
+            {formatQuantity(item.quantity)} {item.unit}
+          </ThemedText>
+          <RoundButton label="+" onPress={onIncrease} color={buttonColor} size={32} />
+        </View>
+      )}
 
       {!isLast && <View style={[styles.divider, { backgroundColor: dividerColor }]} />}
     </Pressable>
@@ -197,6 +241,40 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: 700,
   },
+  clearButton: {
+    marginTop: Spacing.two,
+    borderRadius: 14,
+    paddingVertical: Spacing.three - Spacing.one,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    color: AccentColor,
+    fontWeight: 600,
+  },
+  check: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkOn: {
+    backgroundColor: AccentColor,
+    borderColor: AccentColor,
+  },
+  checkMark: {
+    color: '#ffffff',
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: 800,
+  },
+  dimmed: {
+    opacity: 0.45,
+  },
+  strike: {
+    textDecorationLine: 'line-through',
+  },
   sectionHeader: {
     marginTop: Spacing.four,
     marginBottom: Spacing.two,
@@ -208,7 +286,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingVertical: Spacing.three - Spacing.one,
-    paddingLeft: Spacing.three,
+    paddingLeft: Spacing.three - Spacing.one,
     paddingRight: Spacing.two + Spacing.one,
     minHeight: 56,
   },
@@ -237,7 +315,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     position: 'absolute',
-    left: Spacing.three,
+    left: Spacing.three + 26 + Spacing.two,
     right: 0,
     bottom: 0,
     height: StyleSheet.hairlineWidth,

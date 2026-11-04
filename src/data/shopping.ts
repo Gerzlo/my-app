@@ -24,6 +24,7 @@ export type ShoppingItem = {
   quantity: number;
   unit: Unit;
   note?: string; // например «только 2,5 л»
+  bought?: boolean; // отмечен как купленный
 };
 
 // Тестовые товары, чтобы было что показать на экране.
@@ -43,12 +44,18 @@ export const SAMPLE_ITEMS: ShoppingItem[] = [
 ];
 
 // Собирает товары по разделам для показа на экране.
-// Пустые разделы не показываем.
+// Купленные опускаются вниз своего раздела. Пустые разделы не показываем.
 export function groupBySection(items: ShoppingItem[]) {
-  return SECTIONS.map((section) => ({
-    section,
-    data: items.filter((item) => item.sectionId === section.id),
-  })).filter((group) => group.data.length > 0);
+  return SECTIONS.map((section) => {
+    const inSection = items.filter((item) => item.sectionId === section.id);
+    return {
+      section,
+      data: [
+        ...inSection.filter((item) => !item.bought),
+        ...inSection.filter((item) => item.bought),
+      ],
+    };
+  }).filter((group) => group.data.length > 0);
 }
 
 // «1 товар», «3 товара», «11 товаров».
@@ -63,7 +70,7 @@ export function pluralItems(count: number) {
 export const UNITS: Unit[] = ['шт', 'уп', 'ящ', 'кг', 'л'];
 
 // Товар без id — то, что заполняется в форме.
-export type ItemDraft = Omit<ShoppingItem, 'id'>;
+export type ItemDraft = Omit<ShoppingItem, 'id' | 'bought'>;
 
 // Показывает количество по-русски: 2 → «2», 1.5 → «1,5».
 export function formatQuantity(quantity: number) {

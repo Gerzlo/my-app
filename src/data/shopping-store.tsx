@@ -37,6 +37,8 @@ type ShoppingStore = {
   updateItem: (id: string, draft: ItemDraft) => void;
   removeItem: (id: string) => void;
   changeQuantity: (id: string, delta: number) => void;
+  toggleBought: (id: string) => void;
+  clearBought: () => void;
 };
 
 const ShoppingContext = createContext<ShoppingStore | null>(null);
@@ -53,8 +55,11 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
   const store: ShoppingStore = {
     items,
     addItem: (draft) => setItems((prev) => [...prev, { ...draft, id: newId() }]),
+    // При изменении сохраняем отметку «куплено».
     updateItem: (id, draft) =>
-      setItems((prev) => prev.map((item) => (item.id === id ? { ...draft, id } : item))),
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...draft, id, bought: item.bought } : item))
+      ),
     removeItem: (id) => setItems((prev) => prev.filter((item) => item.id !== id)),
     changeQuantity: (id, delta) =>
       setItems((prev) =>
@@ -65,6 +70,11 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
           return { ...item, quantity: next };
         })
       ),
+    toggleBought: (id) =>
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, bought: !item.bought } : item))
+      ),
+    clearBought: () => setItems((prev) => prev.filter((item) => !item.bought)),
   };
 
   return <ShoppingContext value={store}>{children}</ShoppingContext>;
