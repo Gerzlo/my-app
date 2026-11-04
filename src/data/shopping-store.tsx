@@ -1,9 +1,35 @@
 // Общее хранилище списка «Что купить».
 // Любой экран может получить список и функции для его изменения через useShopping().
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import Storage from 'expo-sqlite/kv-store';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { SAMPLE_ITEMS, newId, type ItemDraft, type ShoppingItem } from '@/data/shopping';
+
+// Под этим именем список хранится в памяти телефона.
+const STORAGE_KEY = 'shopping-items-v1';
+
+// Читаем сохранённый список. Если его ещё нет (первый запуск) — показываем тестовые товары.
+function loadItems(): ShoppingItem[] {
+  try {
+    const saved = Storage.getItemSync(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (error) {
+    console.warn('Не удалось прочитать сохранённый список', error);
+  }
+  return SAMPLE_ITEMS;
+}
+
+function saveItems(items: ShoppingItem[]) {
+  try {
+    Storage.setItemSync(STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.warn('Не удалось сохранить список', error);
+  }
+}
 
 type ShoppingStore = {
   items: ShoppingItem[];
@@ -16,9 +42,13 @@ type ShoppingStore = {
 const ShoppingContext = createContext<ShoppingStore | null>(null);
 
 export function ShoppingProvider({ children }: { children: ReactNode }) {
-  // Пока список живёт только в памяти: после перезапуска вернутся тестовые товары.
-  // Сохранение в памяти телефона добавим на шаге 3.
-  const [items, setItems] = useState<ShoppingItem[]>(SAMPLE_ITEMS);
+  // При запуске загружаем список из памяти телефона.
+  const [items, setItems] = useState<ShoppingItem[]>(loadItems);
+
+  // Любое изменение списка сразу сохраняем.
+  useEffect(() => {
+    saveItems(items);
+  }, [items]);
 
   const store: ShoppingStore = {
     items,
