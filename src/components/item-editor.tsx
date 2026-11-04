@@ -230,11 +230,13 @@ export function RoundButton({
   onPress,
   color,
   size = 44,
+  textColor,
 }: {
   label: string;
   onPress: () => void;
   color: string;
   size?: number;
+  textColor?: string;
 }) {
   return (
     <Pressable
@@ -245,7 +247,12 @@ export function RoundButton({
         { backgroundColor: color, width: size, height: size, borderRadius: size / 2 },
         pressed && styles.pressed,
       ]}>
-      <ThemedText style={[styles.roundButtonText, { fontSize: size * 0.5, lineHeight: size * 0.6 }]}>
+      <ThemedText
+        style={[
+          styles.roundButtonText,
+          { fontSize: size * 0.5, lineHeight: size * 0.6 },
+          textColor ? { color: textColor } : null,
+        ]}>
         {label}
       </ThemedText>
     </Pressable>

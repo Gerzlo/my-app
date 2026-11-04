@@ -1,66 +1,130 @@
-// Общее хранилище списка «Что купить».
-// Любой экран может получить список и функции для его изменения через useShopping().
+// Общее хранилище приложения: список «Что купить» и «Частые товары».
+// Любой экран получает данные и функции для их изменения через useShopping().
 
 import Storage from 'expo-sqlite/kv-store';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { SAMPLE_ITEMS, newId, type ItemDraft, type ShoppingItem } from '@/data/shopping';
+import {
+  SAMPLE_ITEMS,
+  newId,
+  normalizeName,
+  type CatalogItem,
+  type ItemDraft,
+  type ShoppingItem,
+} from '@/data/shopping';
 
-// Под этим именем список хранится в памяти телефона.
-const STORAGE_KEY = 'shopping-items-v1';
+// Под этими именами данные хранятся в памяти телефона.
+const ITEMS_KEY = 'shopping-items-v1';
+const CATALOG_KEY = 'catalog-v1';
 
-// Читаем сохранённый список. Если его ещё нет (первый запуск) — показываем тестовые товары.
-function loadItems(): ShoppingItem[] {
+// Читает сохранённый массив. Если его ещё нет (первый запуск) — возвращает null.
+function loadArray<T>(key: string): T[] | null {
   try {
-    const saved = Storage.getItemSync(STORAGE_KEY);
+    const saved = Storage.getItemSync(key);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) return parsed as T[];
     }
   } catch (error) {
-    console.warn('Не удалось прочитать сохранённый список', error);
+    console.warn(`Не удалось прочитать «${key}»`, error);
   }
-  return SAMPLE_ITEMS;
+  return null;
 }
 
-function saveItems(items: ShoppingItem[]) {
+function saveArray(key: string, value: unknown[]) {
   try {
-    Storage.setItemSync(STORAGE_KEY, JSON.stringify(items));
+    Storage.setItemSync(key, JSON.stringify(value));
   } catch (error) {
-    console.warn('Не удалось сохранить список', error);
+    console.warn(`Не удалось сохранить «${key}»`, error);
   }
 }
+
+function loadItems(): ShoppingItem[] {
+  return loadArray<ShoppingItem>(ITEMS_KEY) ?? SAMPLE_ITEMS;
+}
+
+// При первом запуске «Частые» заполняем тем, что уже есть в списке.
+function loadCatalog(): CatalogItem[] {
+  const saved = loadArray<CatalogItem>(CATALOG_KEY);
+  if (saved) return saved;
+  return loadItems().reduce<CatalogItem[]>((catalog, item) => remember(catalog, item), []);
+}
+
+// Запомнить товар в «Частых». Если такой уже есть — обновить раздел, единицу и количество.
+function remember(catalog: CatalogItem[], draft: ItemDraft): CatalogItem[] {
+  const key = normalizeName(draft.name);
+  const entry = {
+    name: draft.name,
+    sectionId: draft.sectionId,
+    quantity: draft.quantity,
+    unit: draft.unit,
+    note: draft.note,
+  };
+  const existing = catalog.find((c) => normalizeName(c.name) === key);
+  if (existing) {
+    return catalog.map((c) => (c.id === existing.id ? { ...entry, id: c.id } : c));
+  }
+  return [...catalog, { ...entry, id: newId() }];
+}
+
+// Что произошло при добавлении из «Частых».
+export type AddFromCatalogResult = 'added' | 'restored' | 'already';
 
 type ShoppingStore = {
   items: ShoppingItem[];
+  catalog: CatalogItem[];
   addItem: (draft: ItemDraft) => void;
   updateItem: (id: string, draft: ItemDraft) => void;
   removeItem: (id: string) => void;
   changeQuantity: (id: string, delta: number) => void;
   toggleBought: (id: string) => void;
   clearBought: () => void;
+  isInList: (name: string) => boolean;
+  addFromCatalog: (entry: CatalogItem) => AddFromCatalogResult;
+  removeFromCatalog: (id: string) => void;
 };
 
 const ShoppingContext = createContext<ShoppingStore | null>(null);
 
 export function ShoppingProvider({ children }: { children: ReactNode }) {
-  // При запуске загружаем список из памяти телефона.
+  // При запуске загружаем данные из памяти телефона.
   const [items, setItems] = useState<ShoppingItem[]>(loadItems);
+  const [catalog, setCatalog] = useState<CatalogItem[]>(loadCatalog);
 
-  // Любое изменение списка сразу сохраняем.
+  // Любое изменение сразу сохраняем.
   useEffect(() => {
-    saveItems(items);
+    saveArray(ITEMS_KEY, items);
   }, [items]);
+  useEffect(() => {
+    saveArray(CATALOG_KEY, catalog);
+  }, [catalog]);
+
+  // Товар с таким названием есть в списке и ещё не куплен?
+  const isInList = (name: string) => {
+    const key = normalizeName(name);
+    return items.some((item) => !item.bought && normalizeName(item.name) === key);
+  };
 
   const store: ShoppingStore = {
     items,
-    addItem: (draft) => setItems((prev) => [...prev, { ...draft, id: newId() }]),
+    catalog,
+    isInList,
+
+    addItem: (draft) => {
+      setItems((prev) => [...prev, { ...draft, id: newId() }]);
+      setCatalog((prev) => remember(prev, draft));
+    },
+
     // При изменении сохраняем отметку «куплено».
-    updateItem: (id, draft) =>
+    updateItem: (id, draft) => {
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...draft, id, bought: item.bought } : item))
-      ),
+      );
+      setCatalog((prev) => remember(prev, draft));
+    },
+
     removeItem: (id) => setItems((prev) => prev.filter((item) => item.id !== id)),
+
     changeQuantity: (id, delta) =>
       setItems((prev) =>
         prev.map((item) => {
@@ -70,11 +134,33 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
           return { ...item, quantity: next };
         })
       ),
+
     toggleBought: (id) =>
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, bought: !item.bought } : item))
       ),
+
     clearBought: () => setItems((prev) => prev.filter((item) => !item.bought)),
+
+    // Добавить товар из «Частых» в список.
+    // Если он уже в списке — ничего не делаем. Если был отмечен купленным — возвращаем в список.
+    addFromCatalog: (entry) => {
+      const key = normalizeName(entry.name);
+      const existing = items.find((item) => normalizeName(item.name) === key);
+      if (existing && !existing.bought) return 'already';
+      if (existing) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === existing.id ? { ...item, bought: false, quantity: entry.quantity } : item
+          )
+        );
+        return 'restored';
+      }
+      setItems((prev) => [...prev, { ...entry, id: newId() }]);
+      return 'added';
+    },
+
+    removeFromCatalog: (id) => setCatalog((prev) => prev.filter((c) => c.id !== id)),
   };
 
   return <ShoppingContext value={store}>{children}</ShoppingContext>;

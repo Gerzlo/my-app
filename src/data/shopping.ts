@@ -45,7 +45,7 @@ export const SAMPLE_ITEMS: ShoppingItem[] = [
 
 // Собирает товары по разделам для показа на экране.
 // Купленные опускаются вниз своего раздела. Пустые разделы не показываем.
-export function groupBySection(items: ShoppingItem[]) {
+export function groupBySection<T extends { sectionId: SectionId; bought?: boolean }>(items: T[]) {
   return SECTIONS.map((section) => {
     const inSection = items.filter((item) => item.sectionId === section.id);
     return {
@@ -71,6 +71,14 @@ export const UNITS: Unit[] = ['шт', 'уп', 'ящ', 'кг', 'л'];
 
 // Товар без id — то, что заполняется в форме.
 export type ItemDraft = Omit<ShoppingItem, 'id' | 'bought'>;
+
+// Запомненный товар во вкладке «Частые»: название, раздел, обычное количество.
+export type CatalogItem = Omit<ShoppingItem, 'bought'>;
+
+// Для сравнения названий: «  Молоко » и «молоко» — один и тот же товар.
+export function normalizeName(name: string) {
+  return name.trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+}
 
 // Показывает количество по-русски: 2 → «2», 1.5 → «1,5».
 export function formatQuantity(quantity: number) {
