@@ -63,3 +63,7 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+// Акцентный цвет (кнопки) и цвет для опасных действий (удаление).
+export const AccentColor = '#208AEF';
+export const DangerColor = '#FF453A';

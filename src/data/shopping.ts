@@ -59,3 +59,18 @@ export function pluralItems(count: number) {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} товара`;
   return `${count} товаров`;
 }
+
+export const UNITS: Unit[] = ['шт', 'уп', 'ящ', 'кг', 'л'];
+
+// Товар без id — то, что заполняется в форме.
+export type ItemDraft = Omit<ShoppingItem, 'id'>;
+
+// Показывает количество по-русски: 2 → «2», 1.5 → «1,5».
+export function formatQuantity(quantity: number) {
+  return String(quantity).replace('.', ',');
+}
+
+// Новый уникальный id для товара.
+export function newId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
