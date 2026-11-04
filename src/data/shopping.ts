@@ -81,3 +81,23 @@ export function formatQuantity(quantity: number) {
 export function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+// Текст для отправки в WhatsApp / Telegram: только то, что ещё не куплено, по разделам.
+// Возвращает null, если отправлять нечего.
+export function buildShareText(items: ShoppingItem[]): string | null {
+  const groups = groupBySection(items.filter((item) => !item.bought));
+  if (groups.length === 0) return null;
+
+  const now = new Date();
+  const date = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const lines = [`🛒 Что купить (${date})`];
+  for (const { section, data } of groups) {
+    lines.push('', `${section.emoji} ${section.name}`);
+    for (const item of data) {
+      const note = item.note ? ` (${item.note})` : '';
+      lines.push(`• ${item.name} — ${formatQuantity(item.quantity)} ${item.unit}${note}`);
+    }
+  }
+  return lines.join('\n');
+}

@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { Alert, Pressable, SectionList, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, SectionList, Share, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ItemEditor, RoundButton } from '@/components/item-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AccentColor, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { formatQuantity, groupBySection, pluralItems, type ShoppingItem } from '@/data/shopping';
+import {
+  buildShareText,
+  formatQuantity,
+  groupBySection,
+  pluralItems,
+  type ShoppingItem,
+} from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -23,6 +29,20 @@ export default function ShoppingListScreen() {
 
   const groups = groupBySection(items).map((group) => ({ ...group, key: group.section.id }));
   const boughtCount = items.filter((item) => item.bought).length;
+
+  // Открыть меню «Поделиться» iPhone со списком текстом (WhatsApp, Telegram, Сообщения…).
+  async function shareList() {
+    const text = buildShareText(items);
+    if (!text) {
+      Alert.alert('Нечего отправлять', 'Всё уже куплено или список пуст.');
+      return;
+    }
+    try {
+      await Share.share({ message: text });
+    } catch (error) {
+      Alert.alert('Не удалось отправить', String(error));
+    }
+  }
 
   // Убрать из списка всё, что уже куплено.
   function confirmClearBought() {
@@ -64,11 +84,22 @@ export default function ShoppingListScreen() {
               {pluralItems(items.length)}
               {boughtCount > 0 ? ` · куплено ${boughtCount} из ${items.length}` : ''}
             </ThemedText>
-            <Pressable
-              onPress={() => setEditor({ mode: 'new' })}
-              style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
-              <ThemedText style={styles.addButtonText}>＋  Добавить товар</ThemedText>
-            </Pressable>
+            <View style={styles.actions}>
+              <Pressable
+                onPress={() => setEditor({ mode: 'new' })}
+                style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
+                <ThemedText style={styles.addButtonText}>＋  Добавить</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={shareList}
+                style={({ pressed }) => [
+                  styles.shareButton,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedText style={styles.shareButtonText}>↗  Отправить</ThemedText>
+              </Pressable>
+            </View>
             {boughtCount > 0 && (
               <Pressable
                 onPress={confirmClearBought}
@@ -230,8 +261,13 @@ const styles = StyleSheet.create({
     lineHeight: 41,
     fontWeight: 700,
   },
-  addButton: {
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
     marginTop: Spacing.three,
+  },
+  addButton: {
+    flex: 1,
     backgroundColor: AccentColor,
     borderRadius: 14,
     paddingVertical: Spacing.three - Spacing.one,
@@ -239,6 +275,16 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#ffffff',
+    fontWeight: 700,
+  },
+  shareButton: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: Spacing.three - Spacing.one,
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    color: AccentColor,
     fontWeight: 700,
   },
   clearButton: {
