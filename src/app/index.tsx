@@ -1,98 +1,165 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SectionList, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { SAMPLE_ITEMS, groupBySection, pluralItems, type ShoppingItem } from '@/data/shopping';
+import { useTheme } from '@/hooks/use-theme';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+// Главный экран: список «Что купить», разбитый по разделам магазина.
+export default function ShoppingListScreen() {
+  const insets = useSafeAreaInsets();
+  const theme = useTheme();
 
-export default function HomeScreen() {
+  const items = SAMPLE_ITEMS;
+  const groups = groupBySection(items).map((group) => ({ ...group, key: group.section.id }));
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            ПППриветт аааа&nbsp;Expo
+    <ThemedView style={styles.screen}>
+      <SectionList
+        sections={groups}
+        keyExtractor={(item) => item.id}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + Spacing.three,
+            paddingBottom: insets.bottom + BottomTabInset + Spacing.four,
+          },
+        ]}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <ThemedText style={styles.title}>Что купить</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {pluralItems(items.length)} · разделов: {groups.length}
+            </ThemedText>
+          </View>
+        }
+        renderSectionHeader={({ section }) => (
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionHeader}>
+            {section.section.emoji}  {section.section.name.toUpperCase()}
           </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        )}
+        renderItem={({ item, index, section }) => (
+          <ItemRow
+            item={item}
+            isFirst={index === 0}
+            isLast={index === section.data.length - 1}
+            cardColor={theme.backgroundElement}
+            pillColor={theme.backgroundSelected}
+            dividerColor={theme.backgroundSelected}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+        )}
+        ListEmptyComponent={
+          <ThemedText themeColor="textSecondary" style={styles.empty}>
+            Список пуст
+          </ThemedText>
+        }
+      />
     </ThemedView>
   );
 }
 
+type ItemRowProps = {
+  item: ShoppingItem;
+  isFirst: boolean;
+  isLast: boolean;
+  cardColor: string;
+  pillColor: string;
+  dividerColor: string;
+};
+
+// Одна строка с товаром. Строки одного раздела складываются в общую карточку.
+function ItemRow({ item, isFirst, isLast, cardColor, pillColor, dividerColor }: ItemRowProps) {
+  return (
+    <View
+      style={[
+        styles.row,
+        { backgroundColor: cardColor },
+        isFirst && styles.rowFirst,
+        isLast && styles.rowLast,
+      ]}>
+      <View style={styles.rowText}>
+        <ThemedText>{item.name}</ThemedText>
+        {item.note ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            {item.note}
+          </ThemedText>
+        ) : null}
+      </View>
+
+      <View style={[styles.pill, { backgroundColor: pillColor }]}>
+        <ThemedText type="smallBold">
+          {item.quantity} {item.unit}
+        </ThemedText>
+      </View>
+
+      {!isLast && <View style={[styles.divider, { backgroundColor: dividerColor }]} />}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
+  content: {
+    paddingHorizontal: Spacing.three,
+    width: '100%',
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  header: {
+    gap: Spacing.one,
+    marginBottom: Spacing.two,
   },
   title: {
-    textAlign: 'center',
+    fontSize: 34,
+    lineHeight: 41,
+    fontWeight: 700,
   },
-  code: {
-    textTransform: 'uppercase',
+  sectionHeader: {
+    marginTop: Spacing.four,
+    marginBottom: Spacing.two,
+    marginLeft: Spacing.two,
+    letterSpacing: 0.5,
   },
-  stepContainer: {
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.three,
-    alignSelf: 'stretch',
+    paddingVertical: Spacing.three - Spacing.one,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    minHeight: 52,
+  },
+  rowFirst: {
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+  },
+  rowLast: {
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+  rowText: {
+    flex: 1,
+  },
+  pill: {
+    paddingHorizontal: Spacing.two + Spacing.one,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  divider: {
+    position: 'absolute',
+    left: Spacing.three,
+    right: 0,
+    bottom: 0,
+    height: StyleSheet.hairlineWidth,
+  },
+  empty: {
+    textAlign: 'center',
+    marginTop: Spacing.six,
   },
 });
