@@ -65,7 +65,9 @@ export function ItemEditor({
   const [quantityText, setQuantityText] = useState(
     start?.quantity ? formatQuantity(start.quantity) : '1'
   );
+  // Старые товары могли быть в «кг» или «л» — показываем эту единицу, пока её не сменят.
   const [unit, setUnit] = useState<Unit>(start?.unit ?? 'шт');
+  const unitOptions: Unit[] = UNITS.includes(unit) ? UNITS : [...UNITS, unit];
   const [sectionId, setSectionId] = useState<SectionId>(
     start?.sectionId ?? defaultSectionId ?? FALLBACK_SECTION_ID
   );
@@ -186,7 +188,7 @@ export function ItemEditor({
                 <RoundButton label="+" onPress={() => stepQuantity(1)} color={theme.backgroundElement} />
               </View>
               <View style={styles.chips}>
-                {UNITS.map((u) => (
+                {unitOptions.map((u) => (
                   <Chip
                     key={u}
                     label={u}

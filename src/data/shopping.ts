@@ -55,17 +55,24 @@ export const SAMPLE_ITEMS: ShoppingItem[] = [
   { id: '11', name: 'Порошок стиральный', sectionId: 'household', quantity: 4, unit: 'уп' },
 ];
 
-// Собирает товары по разделам для показа на экране.
+// Сравнение по алфавиту: «Кола 0,25 л» раньше «Кола 1,5 л», «Вода» раньше «Кола».
+function byName(a: { name: string; size?: string }, b: { name: string; size?: string }) {
+  return displayName(a).localeCompare(displayName(b), 'ru', { numeric: true, sensitivity: 'base' });
+}
+
+// Собирает товары по разделам для показа на экране. Внутри раздела — по алфавиту.
 // Купленные опускаются вниз своего раздела. Пустые разделы не показываем.
 // Товары из несуществующего раздела показываются в «Прочем».
-export function groupBySection<T extends { sectionId: SectionId; bought?: boolean }>(
+export function groupBySection<
+  T extends { sectionId: SectionId; bought?: boolean; name: string; size?: string },
+>(
   items: T[],
   sections: Section[]
 ) {
   const known = new Set(sections.map((s) => s.id));
   const sectionOf = (item: T) => (known.has(item.sectionId) ? item.sectionId : FALLBACK_SECTION_ID);
   return sections.map((section) => {
-    const inSection = items.filter((item) => sectionOf(item) === section.id);
+    const inSection = items.filter((item) => sectionOf(item) === section.id).sort(byName);
     return {
       section,
       data: [
@@ -85,7 +92,9 @@ export function pluralItems(count: number) {
   return `${count} товаров`;
 }
 
-export const UNITS: Unit[] = ['шт', 'уп', 'ящ', 'кг', 'л'];
+// Единицы количества. «кг» и «л» убраны из выбора — они теперь в поле «Объём».
+// В типе Unit они остались, чтобы старые товары не сломались.
+export const UNITS: Unit[] = ['шт', 'уп', 'ящ'];
 
 // Товар без id — то, что заполняется в форме.
 export type ItemDraft = Omit<ShoppingItem, 'id' | 'bought'>;

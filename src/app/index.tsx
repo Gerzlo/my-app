@@ -92,11 +92,6 @@ export default function ShoppingListScreen() {
             </ThemedText>
             <View style={styles.actions}>
               <Pressable
-                onPress={() => setEditor({ mode: 'new' })}
-                style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
-                <ThemedText style={styles.addButtonText}>＋  Добавить</ThemedText>
-              </Pressable>
-              <Pressable
                 onPress={shareList}
                 style={({ pressed }) => [
                   styles.shareButton,
@@ -104,6 +99,11 @@ export default function ShoppingListScreen() {
                   pressed && styles.pressed,
                 ]}>
                 <ThemedText style={styles.shareButtonText}>↗  Отправить</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => setEditor({ mode: 'new' })}
+                style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
+                <ThemedText style={styles.addButtonText}>＋  Добавить</ThemedText>
               </Pressable>
             </View>
             {boughtCount > 0 && (

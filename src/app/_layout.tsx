@@ -8,6 +8,11 @@ import { ShoppingProvider } from '@/data/shopping-store';
 
 SplashScreen.preventAutoHideAsync();
 
+// При запуске открывается вкладка «Список», хотя слева теперь «Частые».
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   return (

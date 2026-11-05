@@ -87,7 +87,7 @@ export default function FrequentItemsScreen() {
           <View style={styles.header}>
             <ThemedText style={styles.title}>Частые товары</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {pluralItems(catalog.length)} · нажмите, чтобы добавить в список
+              {pluralItems(catalog.length)}
             </ThemedText>
             {catalog.length > 0 && (
               <TextInput
