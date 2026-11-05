@@ -17,7 +17,6 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AccentColor, Spacing } from '@/constants/theme';
-import { pluralItems } from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, showMessage } from '@/utils/dialogs';
@@ -25,7 +24,7 @@ import { shareText } from '@/utils/share';
 
 export function BackupManager({ onClose }: { onClose: () => void }) {
   const theme = useTheme();
-  const { catalog, items, makeBackup, restoreBackup } = useShopping();
+  const { makeBackup, restoreBackup } = useShopping();
   const [pasted, setPasted] = useState('');
 
   function save() {
@@ -71,25 +70,14 @@ export function BackupManager({ onClose }: { onClose: () => void }) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={styles.block}>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
-                Сохраните копию в Заметки или Telegram. Если данные пропадут или появится новый
-                телефон — их можно вернуть.
-              </ThemedText>
               <Pressable
                 onPress={save}
                 style={({ pressed }) => [styles.mainButton, pressed && styles.pressed]}>
                 <ThemedText style={styles.mainButtonText}>↗  Сохранить копию</ThemedText>
               </Pressable>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.hint}>
-                В копии: частые — {pluralItems(catalog.length)}, в списке —{' '}
-                {pluralItems(items.length)}, разделы.
-              </ThemedText>
             </View>
 
             <View style={styles.block}>
-              <ThemedText type="smallBold" style={styles.label}>
-                Восстановить
-              </ThemedText>
               <TextInput
                 value={pasted}
                 onChangeText={setPasted}
@@ -150,7 +138,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.three,
-    gap: Spacing.five,
+    gap: Spacing.four,
   },
   block: {
     gap: Spacing.two,
