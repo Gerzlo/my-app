@@ -22,7 +22,9 @@ import {
   FALLBACK_SECTION_ID,
   UNITS,
   formatQuantity,
-  sizePresetsFor,
+  SIZE_UNITS,
+  formatSize,
+  parseSize,
   type ItemDraft,
   type SectionId,
   type ShoppingItem,
@@ -57,7 +59,9 @@ export function ItemEditor({
 
   const start = item ?? preset;
   const [name, setName] = useState(start?.name ?? '');
-  const [size, setSize] = useState(start?.size ?? '');
+  const initialSize = parseSize(start?.size);
+  const [sizeAmount, setSizeAmount] = useState(initialSize.amount);
+  const [sizeUnit, setSizeUnit] = useState(initialSize.unit);
   const [quantityText, setQuantityText] = useState(
     start?.quantity ? formatQuantity(start.quantity) : '1'
   );
@@ -69,8 +73,6 @@ export function ItemEditor({
   const selectedSectionId = sections.some((s) => s.id === sectionId)
     ? sectionId
     : FALLBACK_SECTION_ID;
-  const [note, setNote] = useState(start?.note ?? '');
-  const sizePresets = sizePresetsFor(selectedSectionId);
 
   // «1,5» → 1.5. Если ввели ерунду — считаем, что 0.
   const quantity = Number(quantityText.replace(',', '.')) || 0;
@@ -85,16 +87,17 @@ export function ItemEditor({
     if (!canSave) return;
     onSave({
       name: name.trim(),
-      size: size.trim().replace(/(\d)\.(\d)/g, '$1,$2') || undefined,
+      size: formatSize(sizeAmount, sizeUnit),
       quantity,
       unit,
       sectionId: selectedSectionId,
-      note: note.trim() || undefined,
     });
   }
 
   function confirmDelete() {
-    const title = [name.trim() || item?.name, size.trim()].filter(Boolean).join(' ');
+    const title = [name.trim() || item?.name, formatSize(sizeAmount, sizeUnit)]
+      .filter(Boolean)
+      .join(' ');
     Alert.alert('Удалить товар?', `«${title}» исчезнет из списка.`, [
       { text: 'Отмена', style: 'cancel' },
       { text: 'Удалить', style: 'destructive', onPress: onDelete },
@@ -147,27 +150,27 @@ export function ItemEditor({
               />
             </Field>
 
-            <Field label="Объём / размер (необязательно)">
-              <View style={styles.chips}>
-                {sizePresets.map((p) => (
+            <Field label="Объём (необязательно)">
+              <View style={styles.sizeRow}>
+                <TextInput
+                  value={sizeAmount}
+                  onChangeText={setSizeAmount}
+                  placeholder="Например, 0,5"
+                  placeholderTextColor={theme.textSecondary}
+                  keyboardType="decimal-pad"
+                  autoFocus={isNew && !!preset}
+                  style={[inputStyle, styles.sizeInput]}
+                />
+                {SIZE_UNITS.map((u) => (
                   <Chip
-                    key={p}
-                    label={p}
-                    selected={size.trim() === p}
-                    onPress={() => setSize(size.trim() === p ? '' : p)}
+                    key={u}
+                    label={u}
+                    selected={sizeUnit === u}
+                    onPress={() => setSizeUnit(u)}
                     color={theme.backgroundElement}
                   />
                 ))}
               </View>
-              <TextInput
-                value={size}
-                onChangeText={setSize}
-                placeholder="Или свой: 900 г, 5 кг, № 3…"
-                placeholderTextColor={theme.textSecondary}
-                autoFocus={isNew && !!preset}
-                returnKeyType="done"
-                style={inputStyle}
-              />
             </Field>
 
             <Field label="Количество">
@@ -215,16 +218,6 @@ export function ItemEditor({
                   />
                 ))}
               </View>
-            </Field>
-
-            <Field label="Заметка (необязательно)">
-              <TextInput
-                value={note}
-                onChangeText={setNote}
-                placeholder="Например, только бутылки 1,5 л"
-                placeholderTextColor={theme.textSecondary}
-                style={inputStyle}
-              />
             </Field>
 
             {!isNew && onAddVariant ? (
@@ -386,6 +379,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three - Spacing.one,
     borderRadius: 12,
+  },
+  sizeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  sizeInput: {
+    flex: 1,
   },
   qtyRow: {
     flexDirection: 'row',

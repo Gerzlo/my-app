@@ -36,20 +36,19 @@ export type ShoppingItem = {
   sectionId: SectionId;
   quantity: number;
   unit: Unit;
-  note?: string; // например «только 2,5 л»
   bought?: boolean; // отмечен как купленный
 };
 
 // Тестовые товары, чтобы было что показать на экране.
 // На следующих шагах их заменит настоящий список, который можно менять.
 export const SAMPLE_ITEMS: ShoppingItem[] = [
-  { id: '1', name: 'Кока-кола', sectionId: 'drinks', quantity: 2, unit: 'ящ', note: 'бутылки 1,5 л' },
+  { id: '1', name: 'Кока-кола', size: '1,5 л', sectionId: 'drinks', quantity: 2, unit: 'ящ' },
   { id: '2', name: 'Вода без газа', sectionId: 'drinks', quantity: 3, unit: 'ящ' },
   { id: '3', name: 'Молоко 3,2%', sectionId: 'dairy', quantity: 20, unit: 'шт' },
   { id: '4', name: 'Кефир', sectionId: 'dairy', quantity: 10, unit: 'шт' },
   { id: '5', name: 'Сметана 20%', sectionId: 'dairy', quantity: 8, unit: 'шт' },
   { id: '6', name: 'Гречка', sectionId: 'grocery', quantity: 10, unit: 'уп' },
-  { id: '7', name: 'Масло подсолнечное', sectionId: 'grocery', quantity: 6, unit: 'шт', note: '1 л' },
+  { id: '7', name: 'Масло подсолнечное', size: '1 л', sectionId: 'grocery', quantity: 6, unit: 'шт' },
   { id: '8', name: 'Майонез', sectionId: 'canned', quantity: 12, unit: 'шт' },
   { id: '9', name: 'Тушёнка', sectionId: 'canned', quantity: 1, unit: 'ящ' },
   { id: '10', name: 'Шоколад', sectionId: 'sweets', quantity: 20, unit: 'шт' },
@@ -104,25 +103,29 @@ export function displayName(item: { name: string; size?: string }) {
   return item.size ? `${item.name} ${item.size}` : item.name;
 }
 
+// Единицы объёма.
+export const SIZE_UNITS = ['л', 'кг', 'г'] as const;
+export type SizeUnit = (typeof SIZE_UNITS)[number];
+
+// «0,5 л» → { amount: '0,5', unit: 'л' }. Старые свободные записи кладём целиком в amount.
+export function parseSize(size?: string): { amount: string; unit: SizeUnit } {
+  const match = (size ?? '').trim().match(/^([\d.,]+)\s*(л|кг|г)$/);
+  if (match) return { amount: match[1], unit: match[2] as SizeUnit };
+  return { amount: (size ?? '').trim(), unit: 'л' };
+}
+
+// { amount: '0.5', unit: 'л' } → «0,5 л». Пустое количество — объёма нет.
+export function formatSize(amount: string, unit: SizeUnit): string | undefined {
+  const clean = amount.trim().replace('.', ',');
+  if (!clean) return undefined;
+  return /^[\d,]+$/.test(clean) ? `${clean} ${unit}` : clean;
+}
+
 // Ключ товара: «Миринда 0,5 л» и «Миринда 1,5 л» — разные товары.
 export function itemKey(item: { name: string; size?: string }) {
   return `${normalizeName(item.name)}|${normalizeName((item.size ?? '').replace('.', ','))}`;
 }
 
-// Быстрые кнопки объёма. Для напитков и молочки — литры, для бакалеи — граммы и кило.
-const SIZE_PRESETS: Record<string, string[]> = {
-  drinks: ['0,33 л', '0,5 л', '1 л', '1,5 л', '2 л', '5 л'],
-  dairy: ['0,5 л', '0,9 л', '1 л', '200 г', '400 г'],
-  grocery: ['400 г', '800 г', '900 г', '1 кг', '5 кг'],
-  canned: ['200 г', '400 г', '800 г'],
-  sweets: ['50 г', '100 г', '200 г', '500 г'],
-  household: ['400 г', '1 кг', '3 кг', '0,5 л', '1 л'],
-};
-const DEFAULT_SIZE_PRESETS = ['100 г', '500 г', '1 кг', '0,5 л', '1 л'];
-
-export function sizePresetsFor(sectionId: SectionId) {
-  return SIZE_PRESETS[sectionId] ?? DEFAULT_SIZE_PRESETS;
-}
 
 // Показывает количество по-русски: 2 → «2», 1.5 → «1,5».
 export function formatQuantity(quantity: number) {
@@ -150,8 +153,7 @@ export function buildShareText(items: ShoppingItem[], sections: Section[]): stri
   for (const { section, data } of groups) {
     lines.push('', `${section.emoji} ${section.name}`);
     for (const item of data) {
-      const note = item.note ? ` (${item.note})` : '';
-      lines.push(`• ${displayName(item)} — ${formatQuantity(item.quantity)} ${item.unit}${note}`);
+      lines.push(`• ${displayName(item)} — ${formatQuantity(item.quantity)} ${item.unit}`);
     }
   }
   return lines.join('\n');

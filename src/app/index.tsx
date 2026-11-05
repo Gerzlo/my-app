@@ -234,11 +234,6 @@ function ItemRow({
           {item.name}
           {item.size ? <ThemedText style={styles.size}> {item.size}</ThemedText> : null}
         </ThemedText>
-        {item.note ? (
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.note}
-          </ThemedText>
-        ) : null}
       </View>
 
       {bought ? (

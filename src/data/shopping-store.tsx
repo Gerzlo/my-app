@@ -70,7 +70,6 @@ function remember(catalog: CatalogItem[], draft: ItemDraft): CatalogItem[] {
     sectionId: draft.sectionId,
     quantity: draft.quantity,
     unit: draft.unit,
-    note: draft.note,
   };
   const existing = catalog.find((c) => itemKey(c) === key);
   if (existing) {

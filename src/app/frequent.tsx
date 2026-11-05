@@ -24,6 +24,17 @@ export default function FrequentItemsScreen() {
   const theme = useTheme();
   const { sections, catalog, isInList, addFromCatalog, removeFromCatalog } = useShopping();
   const [search, setSearch] = useState('');
+  // Открытые разделы. По умолчанию все свёрнуты, чтобы не листать длинный список.
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+
+  function toggleSection(id: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // Поиск по названию.
   const query = normalizeName(search);
@@ -34,7 +45,17 @@ export default function FrequentItemsScreen() {
   const sorted = [...visible].sort((a, b) =>
     displayName(a).localeCompare(displayName(b), 'ru', { numeric: true })
   );
-  const groups = groupBySection(sorted, sections).map((group) => ({ ...group, key: group.section.id }));
+  // При поиске показываем все найденные товары, без сворачивания.
+  const groups = groupBySection(sorted, sections).map((group) => {
+    const isOpen = query.length > 0 || openSections.has(group.section.id);
+    return {
+      ...group,
+      key: group.section.id,
+      isOpen,
+      total: group.data.length,
+      data: isOpen ? group.data : [],
+    };
+  });
 
   function confirmRemove(entry: CatalogItem) {
     Alert.alert(
@@ -85,15 +106,33 @@ export default function FrequentItemsScreen() {
           </View>
         }
         renderSectionHeader={({ section }) => (
-          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionHeader}>
-            {section.section.emoji}  {section.section.name.toUpperCase()}
-          </ThemedText>
+          <Pressable
+            onPress={() => toggleSection(section.section.id)}
+            disabled={query.length > 0}
+            style={({ pressed }) => [
+              styles.sectionHeader,
+              { backgroundColor: theme.backgroundElement },
+              section.isOpen && [
+                styles.sectionHeaderOpen,
+                { borderBottomColor: theme.backgroundSelected },
+              ],
+              pressed && styles.pressed,
+            ]}>
+            <ThemedText style={styles.sectionEmoji}>{section.section.emoji}</ThemedText>
+            <ThemedText style={styles.sectionName}>{section.section.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {section.total}
+            </ThemedText>
+            <ThemedText themeColor="textSecondary" style={styles.chevron}>
+              {section.isOpen ? '⌃' : '⌄'}
+            </ThemedText>
+          </Pressable>
         )}
         renderItem={({ item, index, section }) => (
           <CatalogRow
             entry={item}
             inList={isInList(item)}
-            isFirst={index === 0}
+            isFirst={false}
             isLast={index === section.data.length - 1}
             cardColor={theme.backgroundElement}
             dividerColor={theme.backgroundSelected}
@@ -160,7 +199,6 @@ function CatalogRow({
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {formatQuantity(entry.quantity)} {entry.unit}
-          {entry.note ? ` · ${entry.note}` : ''}
         </ThemedText>
       </View>
 
@@ -204,10 +242,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   sectionHeader: {
-    marginTop: Spacing.four,
-    marginBottom: Spacing.two,
-    marginLeft: Spacing.two,
-    letterSpacing: 0.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    marginTop: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three - Spacing.one,
+    borderRadius: 14,
+  },
+  sectionHeaderOpen: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  sectionEmoji: {
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  sectionName: {
+    flex: 1,
+    fontWeight: 600,
+  },
+  chevron: {
+    width: 18,
+    textAlign: 'center',
+    fontSize: 18,
   },
   row: {
     flexDirection: 'row',
