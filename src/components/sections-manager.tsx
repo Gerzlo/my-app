@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,6 +18,7 @@ import { AccentColor, DangerColor, Spacing } from '@/constants/theme';
 import { FALLBACK_SECTION_ID, SECTION_EMOJIS, type Section } from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
+import { confirmAction } from '@/utils/dialogs';
 
 // Что открыто в форме раздела: новый или существующий.
 type FormState = { mode: 'new' } | { mode: 'edit'; section: Section } | null;
@@ -35,10 +35,9 @@ export function SectionsManager({ onClose }: { onClose: () => void }) {
       count > 0
         ? `Товары из этого раздела (${count}) перейдут в «${fallback}».`
         : 'Раздел будет удалён.';
-    Alert.alert(`Удалить «${section.name}»?`, message, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: () => removeSection(section.id) },
-    ]);
+    confirmAction(`Удалить «${section.name}»?`, message, 'Удалить', () =>
+      removeSection(section.id)
+    );
   }
 
   return (

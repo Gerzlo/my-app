@@ -1,7 +1,6 @@
 // Общее хранилище приложения: список «Что купить» и «Частые товары».
 // Любой экран получает данные и функции для их изменения через useShopping().
 
-import Storage from 'expo-sqlite/kv-store';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import {
@@ -15,6 +14,7 @@ import {
   type Section,
   type ShoppingItem,
 } from '@/data/shopping';
+import { getItem, setItem } from '@/utils/storage';
 
 // Под этими именами данные хранятся в памяти телефона.
 const ITEMS_KEY = 'shopping-items-v1';
@@ -24,7 +24,7 @@ const SECTIONS_KEY = 'sections-v1';
 // Читает сохранённый массив. Если его ещё нет (первый запуск) — возвращает null.
 function loadArray<T>(key: string): T[] | null {
   try {
-    const saved = Storage.getItemSync(key);
+    const saved = getItem(key);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) return parsed as T[];
@@ -37,7 +37,7 @@ function loadArray<T>(key: string): T[] | null {
 
 function saveArray(key: string, value: unknown[]) {
   try {
-    Storage.setItemSync(key, JSON.stringify(value));
+    setItem(key, JSON.stringify(value));
   } catch (error) {
     console.warn(`Не удалось сохранить «${key}»`, error);
   }

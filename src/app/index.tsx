@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, SectionList, Share, StyleSheet, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ItemEditor, RoundButton } from '@/components/item-editor';
@@ -17,6 +17,8 @@ import {
 } from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
+import { confirmAction, showMessage } from '@/utils/dialogs';
+import { shareText } from '@/utils/share';
 
 // Что сейчас открыто в форме: новый товар или существующий.
 // preset — заранее заполненные поля (например, «тот же товар другого объёма»).
@@ -40,22 +42,20 @@ export default function ShoppingListScreen() {
   async function shareList() {
     const text = buildShareText(items, sections);
     if (!text) {
-      Alert.alert('Нечего отправлять', 'Всё уже куплено или список пуст.');
+      showMessage('Нечего отправлять', 'Всё уже куплено или список пуст.');
       return;
     }
-    try {
-      await Share.share({ message: text });
-    } catch (error) {
-      Alert.alert('Не удалось отправить', String(error));
-    }
+    await shareText(text);
   }
 
   // Убрать из списка всё, что уже куплено.
   function confirmClearBought() {
-    Alert.alert('Очистить купленные?', `Из списка уберётся: ${pluralItems(boughtCount)}.`, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Очистить', style: 'destructive', onPress: clearBought },
-    ]);
+    confirmAction(
+      'Очистить купленные?',
+      `Из списка уберётся: ${pluralItems(boughtCount)}.`,
+      'Очистить',
+      clearBought
+    );
   }
 
   // Кнопка «−» на единице: спрашиваем, удалить ли товар.
@@ -64,10 +64,9 @@ export default function ShoppingListScreen() {
       changeQuantity(item.id, -1);
       return;
     }
-    Alert.alert('Удалить товар?', `«${displayName(item)}» исчезнет из списка.`, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: () => removeItem(item.id) },
-    ]);
+    confirmAction('Удалить товар?', `«${displayName(item)}» исчезнет из списка.`, 'Удалить', () =>
+      removeItem(item.id)
+    );
   }
 
   return (

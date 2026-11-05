@@ -3,7 +3,6 @@
 
 import { useState, type ReactNode } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -32,6 +31,7 @@ import {
 } from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
+import { confirmAction } from '@/utils/dialogs';
 
 type ItemEditorProps = {
   item: ShoppingItem | null; // null — новый товар
@@ -101,10 +101,7 @@ export function ItemEditor({
     const title = [name.trim() || item?.name, formatSize(sizeAmount, sizeUnit)]
       .filter(Boolean)
       .join(' ');
-    Alert.alert('Удалить товар?', `«${title}» исчезнет из списка.`, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Удалить', style: 'destructive', onPress: onDelete },
-    ]);
+    if (onDelete) confirmAction('Удалить товар?', `«${title}» исчезнет из списка.`, 'Удалить', onDelete);
   }
 
   const inputStyle = [

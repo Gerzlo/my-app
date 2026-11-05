@@ -61,7 +61,8 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+// Место под нижние вкладки, чтобы они не закрывали конец списка.
+export const BottomTabInset = Platform.select({ ios: 50, android: 80, web: 90 }) ?? 0;
 export const MaxContentWidth = 800;
 
 // Акцентный цвет (кнопки) и цвет для опасных действий (удаление).

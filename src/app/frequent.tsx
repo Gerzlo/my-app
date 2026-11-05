@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RoundButton } from '@/components/item-editor';
@@ -16,6 +16,7 @@ import {
 } from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
+import { confirmAction } from '@/utils/dialogs';
 
 // Вкладка «Частые»: все товары, которые когда-либо добавляли.
 // Нажатие добавляет товар в список «Что купить».
@@ -58,13 +59,11 @@ export default function FrequentItemsScreen() {
   });
 
   function confirmRemove(entry: CatalogItem) {
-    Alert.alert(
+    confirmAction(
       'Убрать из частых?',
       `«${displayName(entry)}» больше не будет во вкладке «Частые». Список покупок не изменится.`,
-      [
-        { text: 'Отмена', style: 'cancel' },
-        { text: 'Убрать', style: 'destructive', onPress: () => removeFromCatalog(entry.id) },
-      ]
+      'Убрать',
+      () => removeFromCatalog(entry.id)
     );
   }
 
