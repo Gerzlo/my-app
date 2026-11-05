@@ -10,7 +10,8 @@ export function WebHead() {
       <meta name="apple-mobile-web-app-title" content="Что купить" />
       <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       <meta name="theme-color" content="#000000" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      {/* Путь без «/» в начале — сайт живёт в подпапке /my-app на GitHub Pages */}
+      <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     </Head>
   );
 }
