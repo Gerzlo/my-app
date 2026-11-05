@@ -81,6 +81,11 @@ export function ItemEditor({
   const canSave = name.trim().length > 0 && quantity > 0;
 
 
+  function stepQuantity(delta: number) {
+    const next = Math.max(1, Math.round((quantity + delta) * 100) / 100);
+    setQuantityText(formatQuantity(next));
+  }
+
   function save() {
     if (!canSave) return;
     onSave({
@@ -173,13 +178,28 @@ export function ItemEditor({
 
             <Field label="Количество">
               <View style={styles.sizeRow}>
-                <TextInput
-                  value={quantityText}
-                  onChangeText={setQuantityText}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
-                  style={[inputStyle, styles.sizeInput]}
-                />
+                {/* − число + в одном поле */}
+                <View style={[styles.qtyBox, { backgroundColor: theme.backgroundElement }]}>
+                  <RoundButton
+                    label="−"
+                    onPress={() => stepQuantity(-1)}
+                    color={theme.backgroundSelected}
+                    size={36}
+                  />
+                  <TextInput
+                    value={quantityText}
+                    onChangeText={setQuantityText}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    style={[styles.qtyInput, { color: theme.text }]}
+                  />
+                  <RoundButton
+                    label="+"
+                    onPress={() => stepQuantity(1)}
+                    color={theme.backgroundSelected}
+                    size={36}
+                  />
+                </View>
                 {unitOptions.map((u) => (
                   <Chip
                     key={u}
@@ -381,6 +401,21 @@ const styles = StyleSheet.create({
   },
   sizeInput: {
     flex: 1,
+  },
+  qtyBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: Spacing.one + Spacing.half,
+    paddingVertical: Spacing.one + Spacing.half,
+  },
+  qtyInput: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 600,
+    paddingVertical: Spacing.one,
   },
   chips: {
     flexDirection: 'row',
