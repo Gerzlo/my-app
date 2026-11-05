@@ -5,17 +5,21 @@ import Storage from 'expo-sqlite/kv-store';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import {
+  DEFAULT_SECTIONS,
+  FALLBACK_SECTION_ID,
   SAMPLE_ITEMS,
   newId,
   normalizeName,
   type CatalogItem,
   type ItemDraft,
+  type Section,
   type ShoppingItem,
 } from '@/data/shopping';
 
 // Под этими именами данные хранятся в памяти телефона.
 const ITEMS_KEY = 'shopping-items-v1';
 const CATALOG_KEY = 'catalog-v1';
+const SECTIONS_KEY = 'sections-v1';
 
 // Читает сохранённый массив. Если его ещё нет (первый запуск) — возвращает null.
 function loadArray<T>(key: string): T[] | null {
@@ -37,6 +41,13 @@ function saveArray(key: string, value: unknown[]) {
   } catch (error) {
     console.warn(`Не удалось сохранить «${key}»`, error);
   }
+}
+
+// Разделы. «Прочее» должно быть всегда — если его вдруг нет, добавляем в конец.
+function loadSections(): Section[] {
+  const saved = loadArray<Section>(SECTIONS_KEY) ?? DEFAULT_SECTIONS;
+  if (saved.some((s) => s.id === FALLBACK_SECTION_ID)) return saved;
+  return [...saved, DEFAULT_SECTIONS.find((s) => s.id === FALLBACK_SECTION_ID)!];
 }
 
 function loadItems(): ShoppingItem[] {
@@ -71,6 +82,11 @@ function remember(catalog: CatalogItem[], draft: ItemDraft): CatalogItem[] {
 export type AddFromCatalogResult = 'added' | 'restored' | 'already';
 
 type ShoppingStore = {
+  sections: Section[];
+  addSection: (name: string, emoji: string) => void;
+  updateSection: (id: string, name: string, emoji: string) => void;
+  moveSection: (id: string, direction: -1 | 1) => void;
+  removeSection: (id: string) => void;
   items: ShoppingItem[];
   catalog: CatalogItem[];
   addItem: (draft: ItemDraft) => void;
@@ -90,6 +106,7 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
   // При запуске загружаем данные из памяти телефона.
   const [items, setItems] = useState<ShoppingItem[]>(loadItems);
   const [catalog, setCatalog] = useState<CatalogItem[]>(loadCatalog);
+  const [sections, setSections] = useState<Section[]>(loadSections);
 
   // Любое изменение сразу сохраняем.
   useEffect(() => {
@@ -98,6 +115,9 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveArray(CATALOG_KEY, catalog);
   }, [catalog]);
+  useEffect(() => {
+    saveArray(SECTIONS_KEY, sections);
+  }, [sections]);
 
   // Товар с таким названием есть в списке и ещё не куплен?
   const isInList = (name: string) => {
@@ -106,6 +126,47 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
   };
 
   const store: ShoppingStore = {
+    sections,
+
+    addSection: (name, emoji) =>
+      setSections((prev) => {
+        // Новый раздел ставим перед «Прочим».
+        const fallbackIndex = prev.findIndex((s) => s.id === FALLBACK_SECTION_ID);
+        const section = { id: newId(), name: name.trim(), emoji };
+        const next = [...prev];
+        next.splice(fallbackIndex === -1 ? next.length : fallbackIndex, 0, section);
+        return next;
+      }),
+
+    updateSection: (id, name, emoji) =>
+      setSections((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, name: name.trim(), emoji } : s))
+      ),
+
+    moveSection: (id, direction) =>
+      setSections((prev) => {
+        const index = prev.findIndex((s) => s.id === id);
+        const target = index + direction;
+        if (index === -1 || target < 0 || target >= prev.length) return prev;
+        const next = [...prev];
+        [next[index], next[target]] = [next[target], next[index]];
+        return next;
+      }),
+
+    // Удаляем раздел, а его товары переносим в «Прочее».
+    removeSection: (id) => {
+      if (id === FALLBACK_SECTION_ID) return;
+      setSections((prev) => prev.filter((s) => s.id !== id));
+      setItems((prev) =>
+        prev.map((item) =>
+          item.sectionId === id ? { ...item, sectionId: FALLBACK_SECTION_ID } : item
+        )
+      );
+      setCatalog((prev) =>
+        prev.map((c) => (c.sectionId === id ? { ...c, sectionId: FALLBACK_SECTION_ID } : c))
+      );
+    },
+
     items,
     catalog,
     isInList,

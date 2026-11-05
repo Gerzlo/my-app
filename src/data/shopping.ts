@@ -1,7 +1,21 @@
 // Данные приложения «Что купить»: разделы магазина и товары.
 
-// Разделы магазина. Порядок здесь = порядок на экране.
-export const SECTIONS = [
+// Раздел магазина. Пользователь может добавлять, переименовывать и удалять разделы.
+export type Section = { id: string; name: string; emoji: string };
+export type SectionId = string;
+
+// Раздел «Прочее» удалить нельзя: туда переезжают товары из удалённых разделов.
+export const FALLBACK_SECTION_ID = 'other';
+
+// Значки на выбор для разделов.
+export const SECTION_EMOJIS = [
+  '🥤', '🥛', '🍚', '🥫', '🍬', '🧴', '📦', '🍞', '🥩', '🐟', '🍗', '🥚',
+  '🧀', '🍎', '🥕', '🥔', '🍝', '🧂', '☕', '🍵', '🧃', '🍺', '🚬', '🧻',
+  '🧼', '🧽', '🐾', '👶', '🧊', '🍦', '🍪', '🥜',
+];
+
+// Разделы по умолчанию (при первом запуске). Порядок здесь = порядок на экране.
+export const DEFAULT_SECTIONS: Section[] = [
   { id: 'drinks', name: 'Напитки', emoji: '🥤' },
   { id: 'dairy', name: 'Молочка', emoji: '🥛' },
   { id: 'grocery', name: 'Бакалея', emoji: '🍚' },
@@ -9,9 +23,7 @@ export const SECTIONS = [
   { id: 'sweets', name: 'Сладости', emoji: '🍬' },
   { id: 'household', name: 'Химия', emoji: '🧴' },
   { id: 'other', name: 'Прочее', emoji: '📦' },
-] as const;
-
-export type SectionId = (typeof SECTIONS)[number]['id'];
+];
 
 // Единицы измерения.
 export type Unit = 'шт' | 'уп' | 'ящ' | 'кг' | 'л';
@@ -45,9 +57,15 @@ export const SAMPLE_ITEMS: ShoppingItem[] = [
 
 // Собирает товары по разделам для показа на экране.
 // Купленные опускаются вниз своего раздела. Пустые разделы не показываем.
-export function groupBySection<T extends { sectionId: SectionId; bought?: boolean }>(items: T[]) {
-  return SECTIONS.map((section) => {
-    const inSection = items.filter((item) => item.sectionId === section.id);
+// Товары из несуществующего раздела показываются в «Прочем».
+export function groupBySection<T extends { sectionId: SectionId; bought?: boolean }>(
+  items: T[],
+  sections: Section[]
+) {
+  const known = new Set(sections.map((s) => s.id));
+  const sectionOf = (item: T) => (known.has(item.sectionId) ? item.sectionId : FALLBACK_SECTION_ID);
+  return sections.map((section) => {
+    const inSection = items.filter((item) => sectionOf(item) === section.id);
     return {
       section,
       data: [
@@ -92,8 +110,11 @@ export function newId() {
 
 // Текст для отправки в WhatsApp / Telegram: только то, что ещё не куплено, по разделам.
 // Возвращает null, если отправлять нечего.
-export function buildShareText(items: ShoppingItem[]): string | null {
-  const groups = groupBySection(items.filter((item) => !item.bought));
+export function buildShareText(items: ShoppingItem[], sections: Section[]): string | null {
+  const groups = groupBySection(
+    items.filter((item) => !item.bought),
+    sections
+  );
   if (groups.length === 0) return null;
 
   const now = new Date();

@@ -14,11 +14,12 @@ import {
   View,
 } from 'react-native';
 
+import { SectionsManager } from '@/components/sections-manager';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AccentColor, DangerColor, Spacing } from '@/constants/theme';
 import {
-  SECTIONS,
+  FALLBACK_SECTION_ID,
   UNITS,
   formatQuantity,
   type ItemDraft,
@@ -26,6 +27,7 @@ import {
   type ShoppingItem,
   type Unit,
 } from '@/data/shopping';
+import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
 
 type ItemEditorProps = {
@@ -38,14 +40,20 @@ type ItemEditorProps = {
 
 export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }: ItemEditorProps) {
   const theme = useTheme();
+  const { sections } = useShopping();
+  const [managingSections, setManagingSections] = useState(false);
   const isNew = item === null;
 
   const [name, setName] = useState(item?.name ?? '');
   const [quantityText, setQuantityText] = useState(item ? formatQuantity(item.quantity) : '1');
   const [unit, setUnit] = useState<Unit>(item?.unit ?? 'шт');
   const [sectionId, setSectionId] = useState<SectionId>(
-    item?.sectionId ?? defaultSectionId ?? 'other'
+    item?.sectionId ?? defaultSectionId ?? FALLBACK_SECTION_ID
   );
+  // Если выбранный раздел удалили — товар окажется в «Прочем».
+  const selectedSectionId = sections.some((s) => s.id === sectionId)
+    ? sectionId
+    : FALLBACK_SECTION_ID;
   const [note, setNote] = useState(item?.note ?? '');
 
   // «1,5» → 1.5. Если ввели ерунду — считаем, что 0.
@@ -63,7 +71,7 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
       name: name.trim(),
       quantity,
       unit,
-      sectionId,
+      sectionId: selectedSectionId,
       note: note.trim() || undefined,
     });
   }
@@ -146,13 +154,21 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
               </View>
             </Field>
 
-            <Field label="Раздел">
+            <Field
+              label="Раздел"
+              action={
+                <Pressable onPress={() => setManagingSections(true)} hitSlop={10}>
+                  <ThemedText type="small" style={styles.fieldAction}>
+                    ✎ Изменить разделы
+                  </ThemedText>
+                </Pressable>
+              }>
               <View style={styles.chips}>
-                {SECTIONS.map((s) => (
+                {sections.map((s) => (
                   <Chip
                     key={s.id}
                     label={`${s.emoji} ${s.name}`}
-                    selected={sectionId === s.id}
+                    selected={selectedSectionId === s.id}
                     onPress={() => setSectionId(s.id)}
                     color={theme.backgroundElement}
                   />
@@ -184,16 +200,29 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
           </ScrollView>
         </KeyboardAvoidingView>
       </ThemedView>
+
+      {managingSections && <SectionsManager onClose={() => setManagingSections(false)} />}
     </Modal>
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <View style={styles.field}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.fieldLabel}>
-        {label}
-      </ThemedText>
+      <View style={styles.fieldHeader}>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.fieldLabel}>
+          {label}
+        </ThemedText>
+        {action}
+      </View>
       {children}
     </View>
   );
@@ -283,6 +312,16 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.two,
+  },
+  fieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: Spacing.two,
+  },
+  fieldAction: {
+    color: AccentColor,
+    fontWeight: 600,
   },
   fieldLabel: {
     marginLeft: Spacing.two,

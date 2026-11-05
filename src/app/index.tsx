@@ -23,16 +23,16 @@ type EditorState = { mode: 'new' } | { mode: 'edit'; item: ShoppingItem } | null
 export default function ShoppingListScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const { items, addItem, updateItem, removeItem, changeQuantity, toggleBought, clearBought } =
+  const { sections, items, addItem, updateItem, removeItem, changeQuantity, toggleBought, clearBought } =
     useShopping();
   const [editor, setEditor] = useState<EditorState>(null);
 
-  const groups = groupBySection(items).map((group) => ({ ...group, key: group.section.id }));
+  const groups = groupBySection(items, sections).map((group) => ({ ...group, key: group.section.id }));
   const boughtCount = items.filter((item) => item.bought).length;
 
   // Открыть меню «Поделиться» iPhone со списком текстом (WhatsApp, Telegram, Сообщения…).
   async function shareList() {
-    const text = buildShareText(items);
+    const text = buildShareText(items, sections);
     if (!text) {
       Alert.alert('Нечего отправлять', 'Всё уже куплено или список пуст.');
       return;

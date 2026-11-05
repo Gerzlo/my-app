@@ -21,7 +21,7 @@ import { useTheme } from '@/hooks/use-theme';
 export default function FrequentItemsScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const { catalog, isInList, addFromCatalog, removeFromCatalog } = useShopping();
+  const { sections, catalog, isInList, addFromCatalog, removeFromCatalog } = useShopping();
   const [search, setSearch] = useState('');
 
   // Поиск по названию.
@@ -31,7 +31,7 @@ export default function FrequentItemsScreen() {
     : catalog;
   // Внутри раздела — по алфавиту, чтобы было легко найти.
   const sorted = [...visible].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-  const groups = groupBySection(sorted).map((group) => ({ ...group, key: group.section.id }));
+  const groups = groupBySection(sorted, sections).map((group) => ({ ...group, key: group.section.id }));
 
   function confirmRemove(entry: CatalogItem) {
     Alert.alert(
