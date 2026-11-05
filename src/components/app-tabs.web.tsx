@@ -62,7 +62,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    alignItems: 'center',
+    // TabList делает ряд — центрируем по горизонтали явно.
+    flexDirection: 'row',
+    justifyContent: 'center',
     paddingHorizontal: Spacing.three,
   },
   inner: {
