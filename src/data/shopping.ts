@@ -32,6 +32,7 @@ export type Unit = 'шт' | 'уп' | 'ящ' | 'кг' | 'л';
 export type ShoppingItem = {
   id: string;
   name: string;
+  size?: string; // объём или размер: «0,5 л», «900 г»
   sectionId: SectionId;
   quantity: number;
   unit: Unit;
@@ -98,6 +99,31 @@ export function normalizeName(name: string) {
   return name.trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
 }
 
+// Название вместе с объёмом: «Миринда 0,5 л».
+export function displayName(item: { name: string; size?: string }) {
+  return item.size ? `${item.name} ${item.size}` : item.name;
+}
+
+// Ключ товара: «Миринда 0,5 л» и «Миринда 1,5 л» — разные товары.
+export function itemKey(item: { name: string; size?: string }) {
+  return `${normalizeName(item.name)}|${normalizeName((item.size ?? '').replace('.', ','))}`;
+}
+
+// Быстрые кнопки объёма. Для напитков и молочки — литры, для бакалеи — граммы и кило.
+const SIZE_PRESETS: Record<string, string[]> = {
+  drinks: ['0,33 л', '0,5 л', '1 л', '1,5 л', '2 л', '5 л'],
+  dairy: ['0,5 л', '0,9 л', '1 л', '200 г', '400 г'],
+  grocery: ['400 г', '800 г', '900 г', '1 кг', '5 кг'],
+  canned: ['200 г', '400 г', '800 г'],
+  sweets: ['50 г', '100 г', '200 г', '500 г'],
+  household: ['400 г', '1 кг', '3 кг', '0,5 л', '1 л'],
+};
+const DEFAULT_SIZE_PRESETS = ['100 г', '500 г', '1 кг', '0,5 л', '1 л'];
+
+export function sizePresetsFor(sectionId: SectionId) {
+  return SIZE_PRESETS[sectionId] ?? DEFAULT_SIZE_PRESETS;
+}
+
 // Показывает количество по-русски: 2 → «2», 1.5 → «1,5».
 export function formatQuantity(quantity: number) {
   return String(quantity).replace('.', ',');
@@ -125,7 +151,7 @@ export function buildShareText(items: ShoppingItem[], sections: Section[]): stri
     lines.push('', `${section.emoji} ${section.name}`);
     for (const item of data) {
       const note = item.note ? ` (${item.note})` : '';
-      lines.push(`• ${item.name} — ${formatQuantity(item.quantity)} ${item.unit}${note}`);
+      lines.push(`• ${displayName(item)} — ${formatQuantity(item.quantity)} ${item.unit}${note}`);
     }
   }
   return lines.join('\n');

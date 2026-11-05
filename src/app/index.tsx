@@ -8,16 +8,22 @@ import { ThemedView } from '@/components/themed-view';
 import { AccentColor, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import {
   buildShareText,
+  displayName,
   formatQuantity,
   groupBySection,
   pluralItems,
+  type ItemDraft,
   type ShoppingItem,
 } from '@/data/shopping';
 import { useShopping } from '@/data/shopping-store';
 import { useTheme } from '@/hooks/use-theme';
 
 // Что сейчас открыто в форме: новый товар или существующий.
-type EditorState = { mode: 'new' } | { mode: 'edit'; item: ShoppingItem } | null;
+// preset — заранее заполненные поля (например, «тот же товар другого объёма»).
+type EditorState =
+  | { mode: 'new'; preset?: Partial<ItemDraft> }
+  | { mode: 'edit'; item: ShoppingItem }
+  | null;
 
 // Главный экран: список «Что купить», разбитый по разделам магазина.
 export default function ShoppingListScreen() {
@@ -58,7 +64,7 @@ export default function ShoppingListScreen() {
       changeQuantity(item.id, -1);
       return;
     }
-    Alert.alert('Удалить товар?', `«${item.name}» исчезнет из списка.`, [
+    Alert.alert('Удалить товар?', `«${displayName(item)}» исчезнет из списка.`, [
       { text: 'Отмена', style: 'cancel' },
       { text: 'Удалить', style: 'destructive', onPress: () => removeItem(item.id) },
     ]);
@@ -143,7 +149,17 @@ export default function ShoppingListScreen() {
 
       {editor && (
         <ItemEditor
+          key={editor.mode === 'edit' ? editor.item.id : `new-${editor.preset?.name ?? ''}`}
           item={editor.mode === 'edit' ? editor.item : null}
+          preset={editor.mode === 'new' ? editor.preset : undefined}
+          onAddVariant={
+            editor.mode === 'edit'
+              ? () => {
+                  const { name, sectionId, unit } = editor.item;
+                  setEditor({ mode: 'new', preset: { name, sectionId, unit } });
+                }
+              : undefined
+          }
           onClose={() => setEditor(null)}
           onSave={(draft) => {
             if (editor.mode === 'edit') {
@@ -214,7 +230,10 @@ function ItemRow({
       </Pressable>
 
       <View style={[styles.rowText, bought && styles.dimmed]}>
-        <ThemedText style={bought && styles.strike}>{item.name}</ThemedText>
+        <ThemedText style={bought && styles.strike}>
+          {item.name}
+          {item.size ? <ThemedText style={styles.size}> {item.size}</ThemedText> : null}
+        </ThemedText>
         {item.note ? (
           <ThemedText type="small" themeColor="textSecondary">
             {item.note}
@@ -317,6 +336,9 @@ const styles = StyleSheet.create({
   },
   dimmed: {
     opacity: 0.45,
+  },
+  size: {
+    fontWeight: 700,
   },
   strike: {
     textDecorationLine: 'line-through',

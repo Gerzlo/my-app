@@ -22,6 +22,7 @@ import {
   FALLBACK_SECTION_ID,
   UNITS,
   formatQuantity,
+  sizePresetsFor,
   type ItemDraft,
   type SectionId,
   type ShoppingItem,
@@ -32,29 +33,44 @@ import { useTheme } from '@/hooks/use-theme';
 
 type ItemEditorProps = {
   item: ShoppingItem | null; // null — новый товар
+  preset?: Partial<ItemDraft>; // заранее заполненные поля для нового товара
   defaultSectionId?: SectionId;
+  onAddVariant?: () => void; // «тот же товар другого объёма»
   onSave: (draft: ItemDraft) => void;
   onDelete?: () => void;
   onClose: () => void;
 };
 
-export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }: ItemEditorProps) {
+export function ItemEditor({
+  item,
+  preset,
+  defaultSectionId,
+  onAddVariant,
+  onSave,
+  onDelete,
+  onClose,
+}: ItemEditorProps) {
   const theme = useTheme();
   const { sections } = useShopping();
   const [managingSections, setManagingSections] = useState(false);
   const isNew = item === null;
 
-  const [name, setName] = useState(item?.name ?? '');
-  const [quantityText, setQuantityText] = useState(item ? formatQuantity(item.quantity) : '1');
-  const [unit, setUnit] = useState<Unit>(item?.unit ?? 'шт');
+  const start = item ?? preset;
+  const [name, setName] = useState(start?.name ?? '');
+  const [size, setSize] = useState(start?.size ?? '');
+  const [quantityText, setQuantityText] = useState(
+    start?.quantity ? formatQuantity(start.quantity) : '1'
+  );
+  const [unit, setUnit] = useState<Unit>(start?.unit ?? 'шт');
   const [sectionId, setSectionId] = useState<SectionId>(
-    item?.sectionId ?? defaultSectionId ?? FALLBACK_SECTION_ID
+    start?.sectionId ?? defaultSectionId ?? FALLBACK_SECTION_ID
   );
   // Если выбранный раздел удалили — товар окажется в «Прочем».
   const selectedSectionId = sections.some((s) => s.id === sectionId)
     ? sectionId
     : FALLBACK_SECTION_ID;
-  const [note, setNote] = useState(item?.note ?? '');
+  const [note, setNote] = useState(start?.note ?? '');
+  const sizePresets = sizePresetsFor(selectedSectionId);
 
   // «1,5» → 1.5. Если ввели ерунду — считаем, что 0.
   const quantity = Number(quantityText.replace(',', '.')) || 0;
@@ -69,6 +85,7 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
     if (!canSave) return;
     onSave({
       name: name.trim(),
+      size: size.trim().replace(/(\d)\.(\d)/g, '$1,$2') || undefined,
       quantity,
       unit,
       sectionId: selectedSectionId,
@@ -77,7 +94,8 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
   }
 
   function confirmDelete() {
-    Alert.alert('Удалить товар?', `«${name.trim() || item?.name}» исчезнет из списка.`, [
+    const title = [name.trim() || item?.name, size.trim()].filter(Boolean).join(' ');
+    Alert.alert('Удалить товар?', `«${title}» исчезнет из списка.`, [
       { text: 'Отмена', style: 'cancel' },
       { text: 'Удалить', style: 'destructive', onPress: onDelete },
     ]);
@@ -123,7 +141,30 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
                 onChangeText={setName}
                 placeholder="Например, Молоко 3,2%"
                 placeholderTextColor={theme.textSecondary}
-                autoFocus={isNew}
+                autoFocus={isNew && !preset}
+                returnKeyType="done"
+                style={inputStyle}
+              />
+            </Field>
+
+            <Field label="Объём / размер (необязательно)">
+              <View style={styles.chips}>
+                {sizePresets.map((p) => (
+                  <Chip
+                    key={p}
+                    label={p}
+                    selected={size.trim() === p}
+                    onPress={() => setSize(size.trim() === p ? '' : p)}
+                    color={theme.backgroundElement}
+                  />
+                ))}
+              </View>
+              <TextInput
+                value={size}
+                onChangeText={setSize}
+                placeholder="Или свой: 900 г, 5 кг, № 3…"
+                placeholderTextColor={theme.textSecondary}
+                autoFocus={isNew && !!preset}
                 returnKeyType="done"
                 style={inputStyle}
               />
@@ -185,6 +226,20 @@ export function ItemEditor({ item, defaultSectionId, onSave, onDelete, onClose }
                 style={inputStyle}
               />
             </Field>
+
+            {!isNew && onAddVariant ? (
+              <Pressable
+                onPress={onAddVariant}
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedText style={{ color: AccentColor, fontWeight: 600 }}>
+                  ＋ Этот же товар другого объёма
+                </ThemedText>
+              </Pressable>
+            ) : null}
 
             {!isNew && onDelete ? (
               <Pressable

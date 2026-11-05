@@ -8,8 +8,8 @@ import {
   DEFAULT_SECTIONS,
   FALLBACK_SECTION_ID,
   SAMPLE_ITEMS,
+  itemKey,
   newId,
-  normalizeName,
   type CatalogItem,
   type ItemDraft,
   type Section,
@@ -63,15 +63,16 @@ function loadCatalog(): CatalogItem[] {
 
 // Запомнить товар в «Частых». Если такой уже есть — обновить раздел, единицу и количество.
 function remember(catalog: CatalogItem[], draft: ItemDraft): CatalogItem[] {
-  const key = normalizeName(draft.name);
+  const key = itemKey(draft);
   const entry = {
     name: draft.name,
+    size: draft.size,
     sectionId: draft.sectionId,
     quantity: draft.quantity,
     unit: draft.unit,
     note: draft.note,
   };
-  const existing = catalog.find((c) => normalizeName(c.name) === key);
+  const existing = catalog.find((c) => itemKey(c) === key);
   if (existing) {
     return catalog.map((c) => (c.id === existing.id ? { ...entry, id: c.id } : c));
   }
@@ -95,7 +96,7 @@ type ShoppingStore = {
   changeQuantity: (id: string, delta: number) => void;
   toggleBought: (id: string) => void;
   clearBought: () => void;
-  isInList: (name: string) => boolean;
+  isInList: (entry: { name: string; size?: string }) => boolean;
   addFromCatalog: (entry: CatalogItem) => AddFromCatalogResult;
   removeFromCatalog: (id: string) => void;
 };
@@ -119,10 +120,10 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
     saveArray(SECTIONS_KEY, sections);
   }, [sections]);
 
-  // Товар с таким названием есть в списке и ещё не куплен?
-  const isInList = (name: string) => {
-    const key = normalizeName(name);
-    return items.some((item) => !item.bought && normalizeName(item.name) === key);
+  // Такой товар (название + объём) есть в списке и ещё не куплен?
+  const isInList = (entry: { name: string; size?: string }) => {
+    const key = itemKey(entry);
+    return items.some((item) => !item.bought && itemKey(item) === key);
   };
 
   const store: ShoppingStore = {
@@ -206,8 +207,8 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
     // Добавить товар из «Частых» в список.
     // Если он уже в списке — ничего не делаем. Если был отмечен купленным — возвращаем в список.
     addFromCatalog: (entry) => {
-      const key = normalizeName(entry.name);
-      const existing = items.find((item) => normalizeName(item.name) === key);
+      const key = itemKey(entry);
+      const existing = items.find((item) => itemKey(item) === key);
       if (existing && !existing.bought) return 'already';
       if (existing) {
         setItems((prev) =>

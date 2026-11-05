@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AccentColor, BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import {
+  displayName,
   formatQuantity,
   groupBySection,
   normalizeName,
@@ -27,16 +28,18 @@ export default function FrequentItemsScreen() {
   // Поиск по названию.
   const query = normalizeName(search);
   const visible = query
-    ? catalog.filter((c) => normalizeName(c.name).includes(query))
+    ? catalog.filter((c) => normalizeName(displayName(c)).includes(query))
     : catalog;
   // Внутри раздела — по алфавиту, чтобы было легко найти.
-  const sorted = [...visible].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const sorted = [...visible].sort((a, b) =>
+    displayName(a).localeCompare(displayName(b), 'ru', { numeric: true })
+  );
   const groups = groupBySection(sorted, sections).map((group) => ({ ...group, key: group.section.id }));
 
   function confirmRemove(entry: CatalogItem) {
     Alert.alert(
       'Убрать из частых?',
-      `«${entry.name}» больше не будет во вкладке «Частые». Список покупок не изменится.`,
+      `«${displayName(entry)}» больше не будет во вкладке «Частые». Список покупок не изменится.`,
       [
         { text: 'Отмена', style: 'cancel' },
         { text: 'Убрать', style: 'destructive', onPress: () => removeFromCatalog(entry.id) },
@@ -89,7 +92,7 @@ export default function FrequentItemsScreen() {
         renderItem={({ item, index, section }) => (
           <CatalogRow
             entry={item}
-            inList={isInList(item.name)}
+            inList={isInList(item)}
             isFirst={index === 0}
             isLast={index === section.data.length - 1}
             cardColor={theme.backgroundElement}
@@ -151,7 +154,10 @@ function CatalogRow({
         pressed && !inList && styles.pressed,
       ]}>
       <View style={styles.rowText}>
-        <ThemedText>{entry.name}</ThemedText>
+        <ThemedText>
+          {entry.name}
+          {entry.size ? <ThemedText style={styles.size}> {entry.size}</ThemedText> : null}
+        </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {formatQuantity(entry.quantity)} {entry.unit}
           {entry.note ? ` · ${entry.note}` : ''}
@@ -222,6 +228,9 @@ const styles = StyleSheet.create({
   },
   rowText: {
     flex: 1,
+  },
+  size: {
+    fontWeight: 700,
   },
   divider: {
     position: 'absolute',
