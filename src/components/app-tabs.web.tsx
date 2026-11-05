@@ -1,38 +1,58 @@
 // Нижние вкладки для веб-версии (в браузере на телефоне).
 // На iPhone/Android используется app-tabs.tsx с системными вкладками.
+//
+// Важно: TabTrigger должны быть прямыми детьми TabList — иначе Expo Router
+// не находит вкладки и переключение не работает.
 
-import { Tabs, TabList, TabSlot, TabTrigger, type TabTriggerSlotProps } from 'expo-router/ui';
+import {
+  Tabs,
+  TabList,
+  TabSlot,
+  TabTrigger,
+  type TabListProps,
+  type TabTriggerSlotProps,
+} from 'expo-router/ui';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { AccentColor, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function AppTabs() {
-  const insets = useSafeAreaInsets();
-
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
-        {/* Внутрь TabList можно передать только один объект стилей, не массив */}
-        <View
-          style={StyleSheet.flatten([
-            styles.bar,
-            { paddingBottom: Math.max(insets.bottom, Spacing.two) },
-          ])}>
-          <ThemedView type="backgroundElement" style={styles.inner}>
-            <TabTrigger name="frequent" href="/frequent" asChild>
-              <TabButton icon="★">Частые</TabButton>
-            </TabTrigger>
-            <TabTrigger name="index" href="/" asChild>
-              <TabButton icon="☰">Список</TabButton>
-            </TabTrigger>
-          </ThemedView>
-        </View>
+        <BottomBar>
+          <TabTrigger name="frequent" href="/frequent" asChild>
+            <TabButton icon="★">Частые</TabButton>
+          </TabTrigger>
+          <TabTrigger name="index" href="/" asChild>
+            <TabButton icon="☰">Список</TabButton>
+          </TabTrigger>
+        </BottomBar>
       </TabList>
     </Tabs>
+  );
+}
+
+// Плашка внизу экрана. Получает вкладки как children и просто оформляет их.
+function BottomBar({ children, style: _style, ...props }: TabListProps) {
+  const insets = useSafeAreaInsets();
+  const theme = useTheme();
+
+  return (
+    <View
+      {...props}
+      style={StyleSheet.flatten([
+        styles.bar,
+        { paddingBottom: Math.max(insets.bottom, Spacing.two) },
+      ])}>
+      <View style={StyleSheet.flatten([styles.inner, { backgroundColor: theme.backgroundElement }])}>
+        {children}
+      </View>
+    </View>
   );
 }
 
@@ -40,18 +60,23 @@ function TabButton({
   children,
   isFocused,
   icon,
+  style: _style,
   ...props
 }: TabTriggerSlotProps & { icon: string }) {
+  const theme = useTheme();
+
   return (
-    <Pressable {...props} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.buttonInner}>
-        <ThemedText style={[styles.icon, isFocused && { color: AccentColor }]}>{icon}</ThemedText>
-        <ThemedText type="smallBold" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
-      </ThemedView>
+    <Pressable
+      {...props}
+      style={({ pressed }) => [
+        styles.button,
+        isFocused && { backgroundColor: theme.backgroundSelected },
+        pressed && styles.pressed,
+      ]}>
+      <ThemedText style={[styles.icon, isFocused && { color: AccentColor }]}>{icon}</ThemedText>
+      <ThemedText type="smallBold" themeColor={isFocused ? 'text' : 'textSecondary'}>
+        {children}
+      </ThemedText>
     </Pressable>
   );
 }
@@ -62,7 +87,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    // TabList делает ряд — центрируем по горизонтали явно.
     flexDirection: 'row',
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
@@ -78,8 +102,6 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-  },
-  buttonInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

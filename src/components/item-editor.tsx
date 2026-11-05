@@ -398,9 +398,12 @@ const styles = StyleSheet.create({
   },
   sizeInput: {
     flex: 1,
+    // В браузере поле ввода иначе не сужается и выталкивает кнопки за край экрана.
+    minWidth: 0,
   },
   qtyBox: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
@@ -409,6 +412,8 @@ const styles = StyleSheet.create({
   },
   qtyInput: {
     flex: 1,
+    minWidth: 0,
+    width: '100%',
     textAlign: 'center',
     fontSize: 18,
     fontWeight: 600,
