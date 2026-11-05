@@ -16,7 +16,12 @@ export default function AppTabs() {
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
-        <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, Spacing.two) }]}>
+        {/* Внутрь TabList можно передать только один объект стилей, не массив */}
+        <View
+          style={StyleSheet.flatten([
+            styles.bar,
+            { paddingBottom: Math.max(insets.bottom, Spacing.two) },
+          ])}>
           <ThemedView type="backgroundElement" style={styles.inner}>
             <TabTrigger name="frequent" href="/frequent" asChild>
               <TabButton icon="★">Частые</TabButton>
