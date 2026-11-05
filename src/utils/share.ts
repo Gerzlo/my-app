@@ -3,7 +3,8 @@ import { Share } from 'react-native';
 
 import { showMessage } from '@/utils/dialogs';
 
-export async function shareText(text: string) {
+// Последние два параметра нужны только в браузере (когда текст копируется).
+export async function shareText(text: string, _copiedTitle?: string, _copiedMessage?: string) {
   try {
     await Share.share({ message: text });
   } catch (error) {

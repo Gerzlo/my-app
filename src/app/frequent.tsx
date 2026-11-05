@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BackupManager } from '@/components/backup-manager';
 import { RoundButton } from '@/components/item-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -27,6 +28,7 @@ export default function FrequentItemsScreen() {
   const [search, setSearch] = useState('');
   // Открытые разделы. По умолчанию все свёрнуты, чтобы не листать длинный список.
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const [showBackup, setShowBackup] = useState(false);
 
   function toggleSection(id: string) {
     setOpenSections((prev) => {
@@ -84,7 +86,20 @@ export default function FrequentItemsScreen() {
         ]}
         ListHeaderComponent={
           <View style={styles.header}>
-            <ThemedText style={styles.title}>Частые товары</ThemedText>
+            <View style={styles.titleRow}>
+              <ThemedText style={styles.title}>Частые товары</ThemedText>
+              <Pressable
+                onPress={() => setShowBackup(true)}
+                hitSlop={10}
+                accessibilityLabel="Резервная копия"
+                style={({ pressed }) => [
+                  styles.gear,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && styles.pressed,
+                ]}>
+                <ThemedText style={[styles.gearIcon, { color: theme.textSecondary }]}>⚙︎</ThemedText>
+              </Pressable>
+            </View>
             <ThemedText type="small" themeColor="textSecondary">
               {pluralItems(catalog.length)}
             </ThemedText>
@@ -154,6 +169,7 @@ export default function FrequentItemsScreen() {
           </ThemedText>
         }
       />
+      {showBackup && <BackupManager onClose={() => setShowBackup(false)} />}
     </ThemedView>
   );
 }
@@ -228,7 +244,25 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     marginBottom: Spacing.two,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  gear: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gearIcon: {
+    fontSize: 20,
+    lineHeight: 24,
+  },
   title: {
+    flexShrink: 1,
     fontSize: 34,
     lineHeight: 41,
     fontWeight: 700,

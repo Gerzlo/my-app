@@ -44,7 +44,10 @@ function saveArray(key: string, value: unknown[]) {
 
 // Разделы. «Прочее» должно быть всегда — если его вдруг нет, добавляем в конец.
 function loadSections(): Section[] {
-  const saved = loadArray<Section>(SECTIONS_KEY) ?? DEFAULT_SECTIONS;
+  return withFallback(loadArray<Section>(SECTIONS_KEY) ?? DEFAULT_SECTIONS);
+}
+
+function withFallback(saved: Section[]): Section[] {
   if (saved.some((s) => s.id === FALLBACK_SECTION_ID)) return saved;
   return [...saved, DEFAULT_SECTIONS.find((s) => s.id === FALLBACK_SECTION_ID)!];
 }
@@ -77,6 +80,39 @@ function remember(catalog: CatalogItem[], draft: ItemDraft): CatalogItem[] {
 }
 
 // Что произошло при добавлении из «Частых».
+// Резервная копия: всё в одном тексте, который можно сохранить в Заметки или Telegram.
+const BACKUP_APP = 'chto-kupit';
+
+type Backup = {
+  app: string;
+  version: number;
+  date: string;
+  sections: Section[];
+  catalog: CatalogItem[];
+  items: ShoppingItem[];
+};
+
+// Достаёт копию из вставленного текста. Если текст не тот — возвращает null.
+function parseBackup(text: string): Backup | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end <= start) return null;
+  try {
+    const data = JSON.parse(text.slice(start, end + 1));
+    if (
+      data?.app !== BACKUP_APP ||
+      !Array.isArray(data.sections) ||
+      !Array.isArray(data.catalog) ||
+      !Array.isArray(data.items)
+    ) {
+      return null;
+    }
+    return data as Backup;
+  } catch {
+    return null;
+  }
+}
+
 export type AddFromCatalogResult = 'added' | 'restored' | 'already';
 
 type ShoppingStore = {
@@ -96,6 +132,8 @@ type ShoppingStore = {
   isInList: (entry: { name: string; size?: string }) => boolean;
   addFromCatalog: (entry: CatalogItem) => AddFromCatalogResult;
   removeFromCatalog: (id: string) => void;
+  makeBackup: () => string;
+  restoreBackup: (text: string) => boolean;
 };
 
 const ShoppingContext = createContext<ShoppingStore | null>(null);
@@ -220,6 +258,22 @@ export function ShoppingProvider({ children }: { children: ReactNode }) {
     },
 
     removeFromCatalog: (id) => setCatalog((prev) => prev.filter((c) => c.id !== id)),
+
+    makeBackup: () => {
+      const date = new Date().toLocaleDateString('ru-RU');
+      const backup: Backup = { app: BACKUP_APP, version: 1, date, sections, catalog, items };
+      return `Копия «Что купить» от ${date}\n${JSON.stringify(backup)}`;
+    },
+
+    // Заменяет все данные на данные из копии. false — если текст не похож на копию.
+    restoreBackup: (text) => {
+      const backup = parseBackup(text);
+      if (!backup) return false;
+      setSections(withFallback(backup.sections));
+      setCatalog(backup.catalog);
+      setItems(backup.items);
+      return true;
+    },
   };
 
   return <ShoppingContext value={store}>{children}</ShoppingContext>;
