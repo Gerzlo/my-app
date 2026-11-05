@@ -113,21 +113,23 @@ export function displayName(item: { name: string; size?: string }) {
 }
 
 // Единицы объёма.
-export const SIZE_UNITS = ['л', 'кг', 'г'] as const;
+export const SIZE_UNITS = ['л', 'кг', 'г', '%'] as const;
 export type SizeUnit = (typeof SIZE_UNITS)[number];
 
 // «0,5 л» → { amount: '0,5', unit: 'л' }. Старые свободные записи кладём целиком в amount.
 export function parseSize(size?: string): { amount: string; unit: SizeUnit } {
-  const match = (size ?? '').trim().match(/^([\d.,]+)\s*(л|кг|г)$/);
+  const match = (size ?? '').trim().match(/^([\d.,]+)\s*(л|кг|г|%)$/);
   if (match) return { amount: match[1], unit: match[2] as SizeUnit };
   return { amount: (size ?? '').trim(), unit: 'л' };
 }
 
-// { amount: '0.5', unit: 'л' } → «0,5 л». Пустое количество — объёма нет.
+// { amount: '0.5', unit: 'л' } → «0,5 л», { amount: '3,2', unit: '%' } → «3,2%». Пусто — объёма нет.
 export function formatSize(amount: string, unit: SizeUnit): string | undefined {
   const clean = amount.trim().replace('.', ',');
   if (!clean) return undefined;
-  return /^[\d,]+$/.test(clean) ? `${clean} ${unit}` : clean;
+  if (!/^[\d,]+$/.test(clean)) return clean;
+  // Процент пишется слитно: «3,2%», остальное через пробел: «0,5 л».
+  return unit === '%' ? `${clean}%` : `${clean} ${unit}`;
 }
 
 // Ключ товара: «Миринда 0,5 л» и «Миринда 1,5 л» — разные товары.
