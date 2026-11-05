@@ -6,7 +6,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import {
   DEFAULT_SECTIONS,
   FALLBACK_SECTION_ID,
-  SAMPLE_ITEMS,
   itemKey,
   newId,
   type CatalogItem,
@@ -51,14 +50,13 @@ function loadSections(): Section[] {
 }
 
 function loadItems(): ShoppingItem[] {
-  return loadArray<ShoppingItem>(ITEMS_KEY) ?? SAMPLE_ITEMS;
+  return loadArray<ShoppingItem>(ITEMS_KEY) ?? [];
 }
 
-// При первом запуске «Частые» заполняем тем, что уже есть в списке.
+// При первом запуске список и «Частые» пустые.
 function loadCatalog(): CatalogItem[] {
   const saved = loadArray<CatalogItem>(CATALOG_KEY);
-  if (saved) return saved;
-  return loadItems().reduce<CatalogItem[]>((catalog, item) => remember(catalog, item), []);
+  return saved ?? [];
 }
 
 // Запомнить товар в «Частых». Если такой уже есть — обновить раздел, единицу и количество.

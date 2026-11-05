@@ -39,22 +39,6 @@ export type ShoppingItem = {
   bought?: boolean; // отмечен как купленный
 };
 
-// Тестовые товары, чтобы было что показать на экране.
-// На следующих шагах их заменит настоящий список, который можно менять.
-export const SAMPLE_ITEMS: ShoppingItem[] = [
-  { id: '1', name: 'Кока-кола', size: '1,5 л', sectionId: 'drinks', quantity: 2, unit: 'ящ' },
-  { id: '2', name: 'Вода без газа', sectionId: 'drinks', quantity: 3, unit: 'ящ' },
-  { id: '3', name: 'Молоко 3,2%', sectionId: 'dairy', quantity: 20, unit: 'шт' },
-  { id: '4', name: 'Кефир', sectionId: 'dairy', quantity: 10, unit: 'шт' },
-  { id: '5', name: 'Сметана 20%', sectionId: 'dairy', quantity: 8, unit: 'шт' },
-  { id: '6', name: 'Гречка', sectionId: 'grocery', quantity: 10, unit: 'уп' },
-  { id: '7', name: 'Масло подсолнечное', size: '1 л', sectionId: 'grocery', quantity: 6, unit: 'шт' },
-  { id: '8', name: 'Майонез', sectionId: 'canned', quantity: 12, unit: 'шт' },
-  { id: '9', name: 'Тушёнка', sectionId: 'canned', quantity: 1, unit: 'ящ' },
-  { id: '10', name: 'Шоколад', sectionId: 'sweets', quantity: 20, unit: 'шт' },
-  { id: '11', name: 'Порошок стиральный', sectionId: 'household', quantity: 4, unit: 'уп' },
-];
-
 // Сравнение по алфавиту: «Кола 0,25 л» раньше «Кола 1,5 л», «Вода» раньше «Кола».
 function byName(a: { name: string; size?: string }, b: { name: string; size?: string }) {
   return displayName(a).localeCompare(displayName(b), 'ru', { numeric: true, sensitivity: 'base' });
