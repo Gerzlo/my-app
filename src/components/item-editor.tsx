@@ -80,10 +80,6 @@ export function ItemEditor({
   const quantity = Number(quantityText.replace(',', '.')) || 0;
   const canSave = name.trim().length > 0 && quantity > 0;
 
-  function stepQuantity(delta: number) {
-    const next = Math.max(1, Math.round((quantity + delta) * 100) / 100);
-    setQuantityText(formatQuantity(next));
-  }
 
   function save() {
     if (!canSave) return;
@@ -176,18 +172,14 @@ export function ItemEditor({
             </Field>
 
             <Field label="Количество">
-              <View style={styles.qtyRow}>
-                <RoundButton label="−" onPress={() => stepQuantity(-1)} color={theme.backgroundElement} />
+              <View style={styles.sizeRow}>
                 <TextInput
                   value={quantityText}
                   onChangeText={setQuantityText}
                   keyboardType="decimal-pad"
                   selectTextOnFocus
-                  style={[inputStyle, styles.qtyInput]}
+                  style={[inputStyle, styles.sizeInput]}
                 />
-                <RoundButton label="+" onPress={() => stepQuantity(1)} color={theme.backgroundElement} />
-              </View>
-              <View style={styles.chips}>
                 {unitOptions.map((u) => (
                   <Chip
                     key={u}
@@ -389,17 +381,6 @@ const styles = StyleSheet.create({
   },
   sizeInput: {
     flex: 1,
-  },
-  qtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  qtyInput: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: 600,
   },
   chips: {
     flexDirection: 'row',
