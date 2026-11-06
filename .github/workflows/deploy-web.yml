@@ -34,6 +34,9 @@ jobs:
       - name: Сборка веб-версии
         run: npx expo export --platform web
 
+      - name: Офлайн-режим
+        run: node scripts/make-offline.js
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
